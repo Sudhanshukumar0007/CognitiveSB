@@ -1,21 +1,6 @@
-import { useEffect, useState } from "react";
 import { ArrowRight, Play, BookOpen, BrainCircuit, PenTool, Target, Brain, CopyCheck } from "lucide-react";
 
 export default function HeroSection({ onNavigate, onOpenNotes }: { onNavigate?: (tab: string) => void, onOpenNotes?: () => void }) {
-  const [stats, setStats] = useState<{concepts: number, pass_rate: number, retention: number} | null>(null)
-
-  useEffect(() => {
-    fetch('/api/progress')
-      .then(res => res.json())
-      .then(d => {
-        setStats({
-          concepts: d.concepts_mastered,
-          pass_rate: d.exam_pass_rate,
-          retention: d.retention_multiplier
-        })
-      })
-      .catch(err => console.error("Stats fetch error:", err))
-  }, [])
   return (
     <div className="relative w-full min-h-screen text-white overflow-hidden font-sans border-b border-[#7c5cbf]/20">
       <style>{`
@@ -131,7 +116,7 @@ export default function HeroSection({ onNavigate, onOpenNotes }: { onNavigate?: 
               <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#7c5cbf]/20 mb-4 text-[#a78bfa] mx-auto border border-[#7c5cbf]/30">
                 <Brain className="w-6 h-6" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-1">{stats ? `${stats.concepts.toLocaleString()}+` : "2,400+"}</h3>
+              <h3 className="text-3xl font-bold text-white mb-1">2,400+</h3>
               <p className="text-[#9896b0] text-sm">Concepts Mastered</p>
             </div>
             
@@ -140,7 +125,7 @@ export default function HeroSection({ onNavigate, onOpenNotes }: { onNavigate?: 
               <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#34d399]/20 mb-4 text-[#34d399] mx-auto border border-[#34d399]/30">
                 <CopyCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-1">{stats ? `${stats.pass_rate}%` : "94%"}</h3>
+              <h3 className="text-3xl font-bold text-white mb-1">94%</h3>
               <p className="text-[#9896b0] text-sm">Exam Pass Rate</p>
             </div>
 
@@ -149,7 +134,7 @@ export default function HeroSection({ onNavigate, onOpenNotes }: { onNavigate?: 
               <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#fbbf24]/20 mb-4 text-[#fbbf24] mx-auto border border-[#fbbf24]/30">
                 <Target className="w-6 h-6" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-1">{stats ? `${stats.retention}x` : "3.2x"}</h3>
+              <h3 className="text-3xl font-bold text-white mb-1">3.2x</h3>
               <p className="text-[#9896b0] text-sm">Faster Retention</p>
             </div>
           </div>

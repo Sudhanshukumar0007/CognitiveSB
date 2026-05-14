@@ -12,4 +12,7 @@ huggingface-hub
 flask-cors
 PyMuPDF
 python-docx
+pypdf
+python-pptx
+unstructured
 sentence-transformers

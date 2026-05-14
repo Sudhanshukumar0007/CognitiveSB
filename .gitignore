@@ -1,7 +1,43 @@
-venv/
+# Python
 __pycache__/
+.pycache_check/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Environment and local secrets
 .env
+.env.*
+!.env.sample
+
+# Runtime data and generated artifacts
 uploads/
 vector_store/
-*.pyc
-shadowbyte.db
+*.faiss
+*.pkl
+*.db
+*.sqlite
+*.sqlite3
+knowledge_graph.json
+debug_vectorstore*/
+debug_vectorstore.py
+test_generate.py
+test_retrieval.py
+
+# Frontend dependencies and builds
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Logs and local OS/editor files
+*.log
+.DS_Store
+.idea/
+
+# Internal planning documents
+IMPROVEMENT2.docx
+Improvement_Doc.md

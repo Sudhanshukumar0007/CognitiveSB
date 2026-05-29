@@ -26,7 +26,6 @@ class RagWorkflow:
         self.embedder = Embedder()
         # Ensure we use the index.faiss path structure correctly
         self.vector_store = VectorStore(index_path="vector_store")
-        self.vector_store.load(self.embedder.model)
 
     def _get_system_prompt(self, mode: str) -> str:
         if mode == "socratic":

@@ -52,6 +52,20 @@ class VectorStore:
                     filter={"session_id": session_id}
                 )
             except TypeError:
-                docs = self.vector_store.max_marginal_relevance_search(query, k=max(k * 4, 10), fetch_k=max(k * 8, 20))
-                return [doc for doc in docs if doc.metadata.get("session_id") == session_id][:k]
+                # Fetch a much larger global pool to prevent session data starvation
+                fallback_k = 50
+                docs = self.vector_store.max_marginal_relevance_search(
+                    query,
+                    k=fallback_k,
+                    fetch_k=fallback_k * 2
+                )
+                results = [doc for doc in docs if doc.metadata.get("session_id") == session_id][:k]
+                if not results:
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        "Fallback filter returned no documents for session_id=%s. "
+                        "Consider increasing fallback_k if the vector store has many sessions.",
+                        session_id
+                    )
+                return results
         return self.vector_store.max_marginal_relevance_search(query, k=k, fetch_k=10)

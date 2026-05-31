@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()  # must be first — before any module that reads env vars
 
 from flask import Flask, render_template, request, Response, stream_with_context, jsonify
+from werkzeug.utils import secure_filename  # ADDED: Import secure_filename
 from loaders.loader_manager import LoaderManager
 from loaders.youtube_loader import YoutubeLoader
 from processing.chunker import Chunker
@@ -77,7 +78,9 @@ def index():
             return render_template("index.html", message=message)
 
         if file and allowed_file(file.filename):
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+            # FIXED: Sanitize the filename before saving to prevent Path Traversal
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(filepath)
 
             loader = LoaderManager()
@@ -110,6 +113,7 @@ def index():
             return render_template("index.html", message=message)
 
     return render_template("index.html", message=message)
+
 @app.route("/query", methods=["POST"])
 def query():
     from processing.graph import rag_graph
@@ -122,6 +126,7 @@ def query():
     answer = result["answer"]
 
     return render_template("index.html", answer=answer)
+
 @app.route("/youtube", methods=["GET", "POST"])
 def youtube():
 
@@ -211,4 +216,5 @@ def api_chat():
     )
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # FIXED: Disabled debug mode for production security
+    app.run(debug=False, port=5000)

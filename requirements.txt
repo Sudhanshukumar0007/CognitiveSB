@@ -16,3 +16,5 @@ pypdf
 python-pptx
 unstructured
 sentence-transformers
+celery[redis]
+redis

@@ -44,6 +44,7 @@ Upload a PDF, DOCX, TXT, or YouTube URL. ShadowByte ingests it through a RAG pip
 - HuggingFace sentence-transformers (embeddings)
 - FAISS (vector store)
 - YouTube Transcript API
+- Celery + Redis (async task queue)
 
 **Frontend**
 - React 19, TypeScript, Vite
@@ -94,6 +95,8 @@ Upload (PDF / DOCX / TXT / YouTube URL)
 │       ├── hooks/          # useChat (SSE streaming)
 │       ├── lib/            # API client, utils
 │       └── styles/         # Design tokens (flat dark)
+├── celery_app.py           # Celery app factory
+├── tasks.py                # Async task definitions (upload, graph, notes, flashcards)
 ├── uploads/                # Runtime — gitignored
 └── vector_store/           # Runtime FAISS index — gitignored
 ```
@@ -122,6 +125,7 @@ All routes under `/api`:
 | `GET` | `/api/graph/<id>` | Get knowledge graph |
 | `POST` | `/api/graph/generate/<id>` | Generate knowledge graph |
 | `GET` | `/api/fact/<id>` | Get a study fact |
+| `GET` | `/api/task/<task_id>` | Poll async task status |
 
 ---
 
@@ -151,24 +155,38 @@ Edit `.env` and set:
 
 ```env
 GROQ_API_KEY="your_groq_api_key"
+REDIS_URL="redis://localhost:6379/0"
 ```
 
 Get a free Groq API key at [console.groq.com](https://console.groq.com)
 
-**3. Set up frontend**
+**3. Start Redis**
+
+Using Docker (recommended):
+
+```bash
+docker run -d -p 6379:6379 --name redis-sb redis
+```
+
+Or install Redis natively on Windows from [github.com/microsoftarchive/redis/releases](https://github.com/microsoftarchive/redis/releases)
+
+**4. Set up frontend**
 
 ```bash
 cd frontend
 npm install
 ```
 
-**4. Run**
+**5. Run**
 
 ```bash
 # Terminal 1 — backend
 python app.py
 
-# Terminal 2 — frontend
+# Terminal 2 — Celery worker
+celery -A celery_app.celery worker --loglevel=info --pool=solo
+
+# Terminal 3 — frontend
 cd frontend
 npm run dev
 ```

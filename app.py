@@ -1,13 +1,13 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()  # must be first — before any module that reads env vars
+
 from flask import Flask, render_template, request, Response, stream_with_context, jsonify
 from loaders.loader_manager import LoaderManager
 from loaders.youtube_loader import YoutubeLoader
 from processing.chunker import Chunker
 from processing.embedder import Embedder
 from retrieval.vector_store import VectorStore
-
-from dotenv import load_dotenv
-load_dotenv()
 
 from db import init_db
 from flask_cors import CORS
@@ -19,6 +19,8 @@ from routes.quiz import quiz_bp
 from routes.notes import notes_bp
 from routes.sessions import sessions_bp
 from routes.fact import fact_bp
+
+from celery_app import celery
 
 init_db()
 
@@ -37,6 +39,18 @@ app.register_blueprint(fact_bp, url_prefix='/api')
 @app.errorhandler(Exception)
 def handle_exception(e):
     return jsonify({"error": "server_error", "message": str(e)}), 500
+
+
+@app.route("/api/task/<task_id>", methods=["GET"])
+def task_status(task_id):
+    result = celery.AsyncResult(task_id)
+    if result.state == "PENDING":
+        return jsonify({"state": "pending"})
+    if result.state == "FAILURE":
+        return jsonify({"state": "failure", "error": str(result.info)}), 500
+    if result.state == "SUCCESS":
+        return jsonify({"state": "success", "result": result.result})
+    return jsonify({"state": result.state.lower()})
 
 
 app.config['UPLOAD_FOLDER'] = 'uploads'

@@ -1,9 +1,6 @@
 from flask import Blueprint, jsonify, request
-import json
 from datetime import datetime, timedelta
 from routes.store import session_store
-from llm.generator import Generator
-from agents.prompts import FLASHCARD_GENERATION_PROMPT
 from db import (
     get_card_schedule,
     get_due_card_ids,
@@ -34,33 +31,10 @@ def get_flashcards(session_id):
 def generate_flashcards(session_id):
     if session_id not in session_store:
         return jsonify({"error": "not_found"}), 404
-        
-    full_text = session_store[session_id].get("full_text", "")[:6000]
-    if not full_text:
-        return jsonify({"error": "no_text"}), 400
-        
-    generator = Generator(json_mode=True)
-    try:
-        res = generator.chain.invoke({"context": full_text, "question": FLASHCARD_GENERATION_PROMPT})
-        from utils.json_helper import extract_json
-        flashcards = extract_json(res)
-        if flashcards:
-            # Add IDs
-            for i, c in enumerate(flashcards.get("cards", [])):
-                c["id"] = f"card_{i}"
-                c["mastery"] = 0
-                c["next_review"] = datetime.now().isoformat()
-                upsert_card_schedule(session_id, c["id"], c.get("front", ""), c["next_review"])
-                
-            session_data = session_store[session_id]
-            session_data["flashcards"] = flashcards
-            session_store[session_id] = session_data
-            upsert_flashcard_progress(session_id, len(flashcards.get("cards", [])), 0)
-            return jsonify(flashcards)
-    except Exception as e:
-        return jsonify({"error": "generation_failed", "message": str(e)}), 500
-        
-    return jsonify({"cards": []})
+
+    from tasks import generate_flashcards_task
+    task = generate_flashcards_task.delay(session_id)
+    return jsonify({"task_id": task.id, "status": "processing"}), 202
 
 def sm2(easiness, interval, repetitions, quality):
     quality = max(0, min(5, int(quality)))

@@ -1,17 +1,24 @@
-import json
 from flask import Blueprint, jsonify, request
-import json
 from routes.store import session_store
 from llm.generator import Generator
 from agents.prompts import QUIZ_MCQ_PROMPT, QUIZ_SHORT_ANSWER_PROMPT
 from agents.prompts import GRADING_PROMPT
 from utils.json_helper import extract_json
+from utils.json_safe import json_error, parse_json_request
+from utils.validation import (
+    validate_extracted_text,
+    validate_quiz_count,
+    validate_session_id,
+)
 from db import record_quiz_score
 
 quiz_bp = Blueprint('quiz', __name__)
 
 @quiz_bp.route('/quiz/<session_id>', methods=['GET'])
 def get_quiz(session_id):
+    valid, error = validate_session_id(session_id)
+    if not valid:
+        return json_error(error)
     if session_id not in session_store:
         return jsonify({"error": "not_found"}), 404
         
@@ -22,16 +29,25 @@ def get_quiz(session_id):
 
 @quiz_bp.route('/quiz/generate/<session_id>', methods=['POST'])
 def generate_quiz(session_id):
+    valid, error = validate_session_id(session_id)
+    if not valid:
+        return json_error(error)
     if session_id not in session_store:
         return jsonify({"error": "not_found"}), 404
         
-    full_text = session_store[session_id].get("full_text", "")[:6000]
-    if not full_text:
+    full_text = session_store[session_id].get("full_text", "")
+    valid, error = validate_extracted_text(full_text, max_length=None)
+    if not valid:
         return jsonify({"error": "no_text"}), 400
+    full_text = full_text[:6000]
         
-    data = request.json or {}
+    data, parse_error = parse_json_request(request)
+    if parse_error:
+        return json_error(parse_error)
     difficulty = data.get('difficulty', 'medium')
-    count = data.get('count', 5)
+    count, count_error = validate_quiz_count(data.get('count', 5))
+    if count_error:
+        return json_error(count_error)
     
     # We could adjust prompts based on difficulty and count, but for now we'll append to the prompt.
     custom_instruction = f" Ensure the difficulty is {difficulty}. Generate exactly {count} questions."
@@ -67,11 +83,17 @@ def generate_quiz(session_id):
 
 @quiz_bp.route('/quiz/grade', methods=['POST'])
 def grade_answer():
-    data = request.json or {}
+    data, parse_error = parse_json_request(request)
+    if parse_error:
+        return json_error(parse_error)
     question = data.get("question", "")
     user_answer = data.get("user_answer", "")
     sample_answer = data.get("sample_answer", "")
     session_id = data.get("session_id", "")
+    if session_id:
+        valid, error = validate_session_id(session_id)
+        if not valid:
+            return json_error(error)
     
     generator = Generator(json_mode=True)
     try:

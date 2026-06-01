@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timedelta
 from routes.store import session_store
+from utils.json_safe import json_error, parse_json_request, require_keys
+from utils.validation import validate_flashcard_rating, validate_session_id
 from db import (
     get_card_schedule,
     get_due_card_ids,
@@ -13,6 +15,9 @@ flashcards_bp = Blueprint('flashcards', __name__)
 
 @flashcards_bp.route('/flashcards/<session_id>', methods=['GET'])
 def get_flashcards(session_id):
+    valid, error = validate_session_id(session_id)
+    if not valid:
+        return json_error(error)
     if session_id not in session_store:
         return jsonify({"error": "not_found"}), 404
         
@@ -29,6 +34,9 @@ def get_flashcards(session_id):
 
 @flashcards_bp.route('/flashcards/generate/<session_id>', methods=['POST'])
 def generate_flashcards(session_id):
+    valid, error = validate_session_id(session_id)
+    if not valid:
+        return json_error(error)
     if session_id not in session_store:
         return jsonify({"error": "not_found"}), 404
 
@@ -55,11 +63,25 @@ def sm2(easiness, interval, repetitions, quality):
 
 @flashcards_bp.route('/flashcards/rate', methods=['POST'])
 def rate_flashcard():
-    data = request.json or {}
+    data, parse_error = parse_json_request(request)
+    if parse_error:
+        return json_error(parse_error)
+    missing = require_keys(data, ["card_id", "session_id"])
+    if missing:
+        return json_error(missing)
+
     card_id = data.get("card_id")
     session_id = data.get("session_id")
-    mastery = data.get("mastery", 1)
-    quality = data.get("quality", mastery)
+    valid, error = validate_session_id(session_id)
+    if not valid:
+        return json_error(error)
+
+    mastery, error = validate_flashcard_rating(data.get("mastery", 1), "mastery")
+    if error:
+        return json_error(error)
+    quality, error = validate_flashcard_rating(data.get("quality", mastery), "quality")
+    if error:
+        return json_error(error)
     
     if session_id not in session_store:
         return jsonify({"error": "not_found"}), 404

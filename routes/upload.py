@@ -1,15 +1,21 @@
 import os
 import uuid
 from flask import Blueprint, request, jsonify
-from werkzeug.utils import secure_filename
+
+from utils.json_safe import json_error, parse_json_request, require_keys
+from utils.validation import (
+    DEFAULT_ALLOWED_EXTENSIONS,
+    validate_upload_filename,
+    validate_youtube_url,
+)
 
 upload_bp = Blueprint('upload', __name__)
 
-ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'pptx'}
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+ALLOWED_EXTENSIONS = DEFAULT_ALLOWED_EXTENSIONS
+MAX_FILE_SIZE = int(os.getenv("MAX_UPLOAD_SIZE", 50 * 1024 * 1024))
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return validate_upload_filename(filename, ALLOWED_EXTENSIONS)[1] is None
 
 @upload_bp.route('/upload', methods=['POST'])
 def upload():
@@ -21,10 +27,9 @@ def upload():
 
         if 'file' in request.files:
             file = request.files['file']
-            if file.filename == '':
-                return jsonify({"error": "upload_failed", "message": "No selected file"}), 400
-            if not allowed_file(file.filename):
-                return jsonify({"error": "upload_failed", "message": "Invalid file type"}), 400
+            filename, error = validate_upload_filename(file.filename, ALLOWED_EXTENSIONS)
+            if error:
+                return jsonify({"error": "upload_failed", "message": error}), 400
 
             file.seek(0, os.SEEK_END)
             size = file.tell()
@@ -32,7 +37,6 @@ def upload():
             if size > MAX_FILE_SIZE:
                 return jsonify({"error": "upload_failed", "message": "File too large"}), 400
 
-            filename = secure_filename(file.filename)
             original_filename = file.filename
             filepath = os.path.join('uploads', filename)
             file.save(filepath)
@@ -40,10 +44,17 @@ def upload():
 
             task = process_upload.delay(session_id, filepath, title, original_filename)
 
-        elif request.is_json and 'youtube_url' in request.json:
-            url = request.json['youtube_url']
-            if "youtube.com/watch" not in url and "youtu.be/" not in url:
-                return jsonify({"error": "upload_failed", "message": "Invalid YouTube URL"}), 400
+        elif request.is_json:
+            data, parse_error = parse_json_request(request)
+            if parse_error:
+                return json_error(parse_error)
+            if require_keys(data, ["youtube_url"]):
+                return jsonify({"error": "upload_failed", "message": "No file or youtube_url provided"}), 400
+
+            url = data["youtube_url"]
+            valid, error = validate_youtube_url(url)
+            if not valid:
+                return jsonify({"error": "upload_failed", "message": error}), 400
 
             title = f"YouTube Video ({url})"
             task = process_upload.delay(

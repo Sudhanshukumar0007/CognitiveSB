@@ -117,7 +117,7 @@ export function streamChat(
   onError: (err: string) => void,
   onCitations?: (citations: Citation[]) => void
 ): void {
-  const url = new URL(`${BASE_URL}/chat`);
+  const url = new URL(`${BASE_URL}/chat`, window.location.href);
   url.searchParams.append('message', message);
   url.searchParams.append('session_id', sessionId);
   url.searchParams.append('mode', mode);

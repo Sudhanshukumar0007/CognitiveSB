@@ -26,7 +26,11 @@ from celery_app import celery
 init_db()
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174"])
+allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
+).split(",")
+CORS(app, origins=[origin.strip() for origin in allowed_origins if origin.strip()])
 
 app.register_blueprint(upload_bp, url_prefix='/api')
 app.register_blueprint(chat_bp, url_prefix='/api')
@@ -216,5 +220,5 @@ def api_chat():
     )
 
 if __name__ == '__main__':
-    # FIXED: Disabled debug mode for production security
-    app.run(debug=False, port=5000)
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+    app.run(debug=debug, port=5000)

@@ -131,6 +131,12 @@ All routes under `/api`:
 
 ## Setup
 
+**Prerequisites**
+Ensure you have the following installed on your machine:
+- **Python 3.10+** (Required for LangGraph and modern typing)
+- **Node.js 18+** (Required for Vite and React 19)
+- **Git**
+
 **1. Clone and set up backend**
 
 ```bash

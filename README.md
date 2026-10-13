@@ -1,4 +1,5 @@
-# ShadowByte
+# CognitiveSB
+
 
 > Most study tools let you read passively. ShadowByte forces active recall — upload your material and get a Socratic tutor, structured notes, auto-generated quizzes, spaced repetition flashcards, and an interactive knowledge graph, all powered by a RAG pipeline that actually understands your content.
 
